@@ -8,7 +8,10 @@ set(CTEST_UPDATE_VERSION_ONLY 1)
 
 ctest_start(Experimental)
 ctest_update()
+ctest_submit(PARTS Update)
+
 ctest_configure()
+ctest_submit(PARTS Configure)
 
 ctest_build(NUMBER_ERRORS num_errors CAPTURE_CMAKE_ERROR cmake_errors)
 if ("${num_errors}" GREATER 0)
@@ -17,6 +20,7 @@ endif()
 if ("${cmake_errors}" EQUAL -1)
   message(SEND_ERROR "error running build command")
 endif()
+ctest_submit(PARTS Build)
 
 ctest_test(RETURN_VALUE test_status CAPTURE_CMAKE_ERROR cmake_errors)
 if (NOT "${test_status}" EQUAL 0)
@@ -26,4 +30,4 @@ if ("${cmake_errors}" EQUAL -1)
   message(SEND_ERROR "error running test command")
 endif()
 
-ctest_submit()
+ctest_submit(PARTS Test Done)
