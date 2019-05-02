@@ -1,0 +1,42 @@
+set(CTEST_SITE "CircleCI 2.0")
+set(CTEST_CMAKE_GENERATOR "Unix Makefiles")
+set(CTEST_SOURCE_DIRECTORY "/root/project")
+set(CTEST_BINARY_DIRECTORY "/root/project/_build")
+set(CTEST_UPDATE_COMMAND git)
+set(CTEST_UPDATE_VERSION_ONLY 1)
+
+set(builds "good" "skip" "good")
+foreach(build IN LISTS builds)
+  ctest_empty_binary_directory("${CTEST_BINARY_DIRECTORY}")
+  set(CTEST_BUILD_NAME "${build} ${BUILDNAME}")
+  ctest_start(Experimental)
+  ctest_update()
+  ctest_submit(PARTS Update)
+
+  if ("${build}" STREQUAL "skip")
+    file(WRITE ${CTEST_BINARY_DIRECTORY}/props.json
+            [=[ { "skip checks": 1 } ]=])
+    ctest_submit(CDASH_UPLOAD "${CTEST_BINARY_DIRECTORY}/props.json" CDASH_UPLOAD_TYPE BuildPropertiesJSON)
+    set(build "good")
+  endif()
+
+  ctest_configure()
+  ctest_submit(PARTS Configure)
+
+  ctest_build(TARGET "${build}" NUMBER_ERRORS num_errors CAPTURE_CMAKE_ERROR cmake_errors)
+  if ("${num_errors}" GREATER 0)
+    message(SEND_ERROR "${num_errors} build errors")
+  endif()
+  ctest_submit(PARTS Build)
+
+  if ("${build}" STREQUAL "fail")
+    ctest_test(RETURN_VALUE test_status CAPTURE_CMAKE_ERROR cmake_errors)
+    if (NOT "${test_status}" EQUAL 0)
+      message(SEND_ERROR "some tests did not pass cleanly")
+    endif()
+    ctest_submit(PARTS Test)
+  endif()
+
+  ctest_submit(PARTS Done)
+  ctest_sleep(30)
+endforeach()
