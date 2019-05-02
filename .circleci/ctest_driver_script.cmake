@@ -5,14 +5,20 @@ set(CTEST_BINARY_DIRECTORY "/root/project/_build")
 set(CTEST_UPDATE_COMMAND git)
 set(CTEST_UPDATE_VERSION_ONLY 1)
 
-set(builds "good" "bad" "fail")
-
+set(builds "good" "skip" "bad" "fail")
 foreach(build IN LISTS builds)
   ctest_empty_binary_directory("${CTEST_BINARY_DIRECTORY}")
   set(CTEST_BUILD_NAME "${build} ${BUILDNAME}")
   ctest_start(Experimental)
   ctest_update()
   ctest_submit(PARTS Update)
+
+  if ("${build}" STREQUAL "skip")
+    file(WRITE ${CTEST_BINARY_DIRECTORY}/props.json
+            [=[ { "skip checks": 1 } ]=])
+    ctest_submit(CDASH_UPLOAD "${CTEST_BINARY_DIRECTORY}/props.json" CDASH_UPLOAD_TYPE BuildPropertiesJSON)
+    set(build "good")
+  endif()
 
   ctest_configure()
   ctest_submit(PARTS Configure)
